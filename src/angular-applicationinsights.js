@@ -334,7 +334,7 @@ var root = window.root;
 				$http(request);
 			};
 
-			var trackPageView = function(pageName, pageUrl, properties, measurements){
+			var trackPageView = function(pageName, pageUrl, properties, measurements, duration){
 				// TODO: consider possible overloads (no name or url but properties and measurements)
 
 				var data = generateAppInsightsData(_names.pageViews, 
@@ -343,10 +343,29 @@ var root = window.root;
 												ver: 1,
 												url: isNullOrUndefined(pageUrl) ? $location.absUrl() : pageUrl,
 												name: isNullOrUndefined(pageName) ? $location.path() : pageName,
+												duration: isNullOrUndefined(duration) ? null : convertDuration(duration),
 												properties: validateProperties(properties),
 												measurements: validateMeasurements(measurements) 
 											});
 				sendData(data);
+			};
+
+			var pendingPageViews ={};
+			var startTrackPageview = function (pageName, pageUrl){
+				pageName = isNullOrUndefined(pageName) ? $location.path() : pageName;
+				pageUrl =  isNullOrUndefined(pageUrl) ? $location.absUrl() : pageUrl;
+				pendingPageViews[pageName + pageUrl] = new Date().getTime();
+			};
+
+			var endTrackPageview = function(pageName, pageUrl, properties, measurements, duration){
+				pageName = isNullOrUndefined(pageName) ? $location.path() : pageName;
+				pageUrl =  isNullOrUndefined(pageUrl) ? $location.absUrl() : pageUrl;
+			 	if(isNullOrUndefined(	pendingPageViews[pageName + pageUrl] )){
+			 		_log.warn('No pending pageview with the name '+pageName+' could be found.');
+			 		trackPageView(pageName,pageUrl,properties,measurements);
+			 	}
+
+			 	trackPageView(pageName,pageUrl, properties, measurements, new Date().getTime - pendingPageViews[pageName + pageUrl]);
 			};
 
 			var trackEvent = function(eventName, properties, measurements, duration){
@@ -468,6 +487,8 @@ var root = window.root;
 			// public api surface
 			return {
 				'trackPageView': trackPageView,
+				'startTrackPageView': startTrackPageview,
+				'endTrackPageView': endTrackPageview,
 				'trackTraceMessage': trackTraceMessage,
 				'trackEvent': trackEvent,
 				'trackMetric': trackMetric,
