@@ -309,6 +309,18 @@ var root = window.root;
 				return validateProperties;
 			};
 
+			var convertDuration = function(duration) {
+               if (isNaN(duration) || duration <= 0) {
+               		duration = 0;
+               }
+               	var ms  = duration % 1000;
+               	var seconds = Math.floor(duration / 1000) % 60;
+               	var minutes = Math.floor(duration / 60000) % 60;
+               	var hours = Math.floor(duration / 3600000) % 24;
+
+               	return (hours < 10 ? "0"+hours: hours) + ":" + (minutes < 10 ? "0"+minutes : minutes)+ ":" + (seconds < 10 ? "0"+seconds:seconds)+"."+(ms >= 100? ms : ms < 10? "00" + ms : "0"+ ms);
+			};
+
 			var sendData = function(data){
 				var request = {
 					method: 'POST',
@@ -337,16 +349,32 @@ var root = window.root;
 				sendData(data);
 			};
 
-			var trackEvent = function(eventName, properties, measurements){
+			var trackEvent = function(eventName, properties, measurements, duration){
 				var data = generateAppInsightsData(_names.events,
 											_types.events,
 											{
 												ver:1,
 												name:eventName,
+												duration:isNullOrUndefined(duration) ? null: convertDuration(duration),
 												properties: validateProperties(properties),
-												measurements: validateMeasurements(measurements)
+												measurements: validateMeasurements(measurements)												
 											});
 				sendData(data);
+			};
+
+			var pendingEvents={};
+			var startTrackEvent = function(eventName){
+				pendingEvents[eventName] = new Date().getTime();
+			};
+
+			var endTrackEvent = function(eventName, properties, measurements){
+				if(isNullOrUndefined(pendingEvents[eventName])){
+					_log.warn('No pending event with the name of '+ eventName +' could be found.');
+					trackEvent(eventName,properties,measurements);
+				}
+
+				trackEvent(eventName,properties,measurements, new Date().getTime() - pendingEvents[eventName]);
+				delete pendingEvents[eventName];
 			};
 
 			var trackTraceMessage = function(message, level, properties){
