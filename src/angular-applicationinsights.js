@@ -150,6 +150,7 @@ var root = window.root;
 			autoPageViewTracking: true,
 			autoLogTracking: true,
 			autoExceptionTracking: true,
+			trackPageViewDuration: false,
 			sessionInactivityTimeout: 1800000
 		};
 		
@@ -351,21 +352,20 @@ var root = window.root;
 			};
 
 			var pendingPageViews ={};
-			var startTrackPageview = function (pageName, pageUrl){
-				pageName = isNullOrUndefined(pageName) ? $location.path() : pageName;
+			var startTrackPageview = function (pageUrl){
 				pageUrl =  isNullOrUndefined(pageUrl) ? $location.absUrl() : pageUrl;
-				pendingPageViews[pageName + pageUrl] = new Date().getTime();
+				pendingPageViews[pageUrl] = new Date().getTime();
 			};
 
 			var endTrackPageview = function(pageName, pageUrl, properties, measurements, duration){
 				pageName = isNullOrUndefined(pageName) ? $location.path() : pageName;
 				pageUrl =  isNullOrUndefined(pageUrl) ? $location.absUrl() : pageUrl;
-			 	if(isNullOrUndefined(	pendingPageViews[pageName + pageUrl] )){
-			 		_log.warn('No pending pageview with the name '+pageName+' could be found.');
+			 	if(isNullOrUndefined(	pendingPageViews[pageUrl] )){
+			 		_log.warn('No pending pageview with the name '+pageUrl+' could be found.');
 			 		trackPageView(pageName,pageUrl,properties,measurements);
 			 	}
 
-			 	trackPageView(pageName,pageUrl, properties, measurements, new Date().getTime - pendingPageViews[pageName + pageUrl]);
+			 	trackPageView(pageName,pageUrl, properties, measurements, new Date().getTime() - pendingPageViews[pageUrl]);
 			};
 
 			var trackEvent = function(eventName, properties, measurements, duration){
@@ -494,18 +494,31 @@ var root = window.root;
 				'trackMetric': trackMetric,
 				'trackException' : trackException,
 				'applicationName': _options.applicationName,
-				'autoPageViewTracking': _options.autoPageViewTracking
+				'autoPageViewTracking': _options.autoPageViewTracking,
+				'trackPageViewDuration': _options.trackPageViewDuration
 			};
 
 		}
 	})
 	// the run block sets up automatic page view tracking
-	.run(['$rootScope', '$location', 'applicationInsightsService', function($rootScope,$location,applicationInsightsService){
-        $rootScope.$on('$locationChangeSuccess', function() {
-           	
+	.run(['$rootScope', '$location', 'applicationInsightsService', function($rootScope,$location,applicationInsightsService){		
+        $rootScope.$on('$locationChangeSuccess', function(scope, newState, oldState) {
            		if(applicationInsightsService.autoPageViewTracking){
-                	applicationInsightsService.trackPageView(applicationInsightsService.applicationName + $location.path());
+           			if(applicationInsightsService.trackPageViewDuration){
+           				applicationInsightsService.startTrackPageView(newState);
+           			}
+           			else{
+                		applicationInsightsService.trackPageView(applicationInsightsService.applicationName + $location.path());
+ 					}
  				}
+        });
+
+        $rootScope.$on('$locationChangeStart', function(scope, newState, oldState){
+        	 	if(applicationInsightsService.autoPageViewTracking && applicationInsightsService.trackPageViewDuration && newState !== oldState){
+        	 		var urlParts =  oldState.split(/^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/);
+
+        	 		applicationInsightsService.endTrackPageView(applicationInsightsService.applicationName + urlParts[9], oldState);
+        	 	}
         });
      }]);
 
