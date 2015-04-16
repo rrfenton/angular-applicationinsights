@@ -1,3 +1,19 @@
+function convertTimeSpanToMS(timeSpan){
+
+	var parts = timeSpan.split(':');
+
+	var ms = 0;
+
+	ms += parts[0] * 3600000;
+	ms += parts[1] * 60000;
+	ms += parts[2] * 1000;
+
+	return ms;
+}
+
+
+
+
 describe('Application Insights for Angular JS Provider', function(){
 	
 	var _appInsightsUrl = 'https://dc.services.visualstudio.com/v2/track';
@@ -122,6 +138,32 @@ describe('Application Insights for Angular JS Provider', function(){
 
 			_insights.trackEvent('Some Test Event');
 			$httpBackend.flush();
+		});
+
+		it('Timed events should have a duration value greater than 0',function(){
+				$httpBackend.expectPOST('https://dc.services.visualstudio.com/v2/track',function(json){
+				var data = JSON.parse(json);
+				//expect(data.length).toEqual(1);
+				expect(data.name).toEqual('Microsoft.ApplicationInsights.Event');
+				
+				var totalMs = convertTimeSpanToMS(data.data.item.duration);
+
+				expect(totalMs).toBeGreaterThan(0);
+
+				return true;
+			}, function(headers){				
+				return headers['Content-Type'] == 'application/json';
+			})
+			.respond(200,'');
+
+			_insights.startTrackEvent('Some Test Event');
+			//waste some time
+			for(var x=0;x<10000000;x++)
+			{}
+			_insights.endTrackEvent('Some Test Event');
+			$httpBackend.flush();
+
+
 		});
 	});
 

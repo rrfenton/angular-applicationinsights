@@ -491,6 +491,8 @@ var root = window.root;
 				'endTrackPageView': endTrackPageview,
 				'trackTraceMessage': trackTraceMessage,
 				'trackEvent': trackEvent,
+				'startTrackEvent': startTrackEvent,
+				'endTrackEvent': endTrackEvent,
 				'trackMetric': trackMetric,
 				'trackException' : trackException,
 				'applicationName': _options.applicationName,
