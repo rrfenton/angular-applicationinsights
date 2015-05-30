@@ -34,6 +34,8 @@ var root = window.root;
     	return isUndefined(val) || val === null; 
 	};
 
+	var _errorOnHttpCall = false;
+
 
 	var generateGUID = function(){
         var value = [];
@@ -121,8 +123,11 @@ var root = window.root;
 		$provide.decorator('$exceptionHandler',['$delegate',function($delegate){
 				origExceptionHandler = $delegate;
 				return function(exception, cause){
-				  // track the call
-           		  interceptFunction(exception,cause);
+				  // track the call 
+				  // ... only if there is no active issues/errors sending data over http, in order to prevent an infinite loop.
+				  if(!_errorOnHttpCall){
+				    interceptFunction(exception,cause);
+				  }
                   // Call the original 
                   origExceptionHandler(exception,cause);		
 				};
@@ -332,7 +337,22 @@ var root = window.root;
 					data:data
 				};
 
-				$http(request);
+				try{
+					$http(request)
+						 .success(function(data, status, headers, config) {
+						 	_errorOnHttpCall = false;
+    						// this callback will be called asynchronously
+    						// when the response is available
+  						})
+ 						 .error(function(data, status, headers, config) {
+    						// called asynchronously if an error occurs
+    						// or server returns response with an error status.
+    						_errorOnHttpCall = true;
+  						});
+ 				}
+ 				catch(e){
+ 					// supressing of exceptions on the initial http call in order to prevent infinate loops with the error interceptor.
+ 				}
 			};
 
 			var trackPageView = function(pageName, pageUrl, properties, measurements, duration){
