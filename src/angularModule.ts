@@ -17,15 +17,27 @@ angularAppInsights.config([
 
 angularAppInsights.provider("applicationInsightsService", () => new AppInsightsProvider());
 
-// the run block sets up automatic page view tracking
 angularAppInsights.run([
-    "$rootScope", "$location", "applicationInsightsService", ($rootScope, $location, applicationInsightsService: ApplicationInsights) => {
+    "$rootScope", "$location", "$interval", "applicationInsightsService", ($rootScope, $location, $interval: angular.IIntervalService, applicationInsightsService: ApplicationInsights) => {
+        
+        // configures auto page view tracking.
         $rootScope.$on("$locationChangeSuccess", () => {
 
             if (applicationInsightsService.options.autoPageViewTracking) {
                 applicationInsightsService.trackPageView(applicationInsightsService.options.applicationName + $location.path());
             }
         });
+
+      
+        // browser performance data may not be ready, so run the check during an interval callback.
+        var promise = $interval(() => {
+
+            if (applicationInsightsService.isPerformanceTimingDataReady()) {
+                applicationInsightsService.trackPageViewPerformance(applicationInsightsService.options.applicationName + $location.path());
+                // cancel the interval once the performance telemetry is sent.
+                $interval.cancel(promise);
+            }
+        }, 250);
     }
 ]);
 
