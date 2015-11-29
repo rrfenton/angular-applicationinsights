@@ -50,5 +50,20 @@ class Tools {
         return value.join("");
     }
 
+    static msToTimeSpan(totalms: number): string {
+        if (isNaN(totalms) || totalms < 0) {
+            totalms = 0;
+        }
+        let ms = `${totalms % 1000}`;
+        let sec = `${Math.floor(totalms / 1000) % 60}`;
+        let min = `${Math.floor(totalms / (1000 * 60)) % 60}`;
+        let hour = `${Math.floor(totalms / (1000 * 60 * 60)) % 24}`;
+        ms = ms.length === 1 ? `00${ms}` : ms.length === 2 ? `0${ms}` : ms;
+        sec = sec.length < 2 ? `0${sec}` : sec;
+        min = min.length < 2 ? `0${min}` : min;
+        hour = hour.length < 2 ? `0${hour}` : hour;
+
+        return hour + ":" + min + ":" + sec + "." + ms;
+    }
 
 }

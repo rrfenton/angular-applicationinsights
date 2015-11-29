@@ -25,6 +25,7 @@ class ApplicationInsights {
     private static namespace = "Microsoft.ApplicationInsights.";
     private static names = {
         pageViews: ApplicationInsights.namespace + "Pageview",
+        pageViewPerformance: ApplicationInsights.namespace + "PageviewPerformance",
         traceMessage: ApplicationInsights.namespace + "Message",
         events: ApplicationInsights.namespace + "Event",
         metrics: ApplicationInsights.namespace + "Metric",
@@ -32,6 +33,7 @@ class ApplicationInsights {
     };
     private static types = {
         pageViews: ApplicationInsights.namespace + "PageviewData",
+        pageViewPerformance: ApplicationInsights.namespace + "PageviewPerformanceData",
         traceMessage: ApplicationInsights.namespace + "MessageData",
         events: ApplicationInsights.namespace + "EventData",
         metrics: ApplicationInsights.namespace + "MetricData",
@@ -128,6 +130,18 @@ class ApplicationInsights {
         return sessionData.id;
     }
 
+    isPerformanceTimingDataReady() {
+        const timing = this._window.performance.timing;
+        return timing.domainLookupStart > 0
+            && timing.navigationStart > 0
+            && timing.responseStart > 0
+            && timing.requestStart > 0
+            && timing.loadEventEnd > 0
+            && timing.responseEnd > 0
+            && timing.connectEnd > 0
+            && timing.domLoading > 0;
+    }
+
 
     private validateMeasurements(measurements) {
         if (Tools.isNullOrUndefined(measurements)) {
@@ -149,6 +163,15 @@ class ApplicationInsights {
         }
 
         return validatedMeasurements;
+    }
+
+    private static getDuration(start: any, end: any): number {
+        var duration = 0;
+        if (!(isNaN(start) || isNaN(end))) {
+            duration = Math.max(end - start, 0);
+        }
+
+        return duration;
     }
 
 
@@ -252,6 +275,65 @@ class ApplicationInsights {
             });
         this.sendData(data);
     }
+    
+    // Sends telemetry about the performance of the current page load, using the performance data from the browser.
+    trackPageViewPerformance(pageName?: string, pageUrl?: string, properties?: any, measurements?: any) {
+        if (!Tools.isNullOrUndefined(this._window) && !Tools.isNullOrUndefined(this._window.performance) && !Tools.isNullOrUndefined(this._window.performance.timing)) {
+            const perforamnceTimingData = window.performance.timing;
+
+             /*
+             * http://www.w3.org/TR/navigation-timing/#processing-model
+             *  |-navigationStart
+             *  |             |-connectEnd
+             *  |             ||-requestStart
+             *  |             ||             |-responseStart
+             *  |             ||             |              |-responseEnd
+             *  |             ||             |              |
+             *  |             ||             |              |         |-loadEventEnd
+             *  |---network---||---request---|---response---|---dom---|
+             *  |--------------------------total----------------------|
+             */
+            const network = ApplicationInsights.getDuration(perforamnceTimingData.navigationStart, perforamnceTimingData.connectEnd);
+            const request = ApplicationInsights.getDuration(perforamnceTimingData.requestStart, perforamnceTimingData.responseStart);
+            const response = ApplicationInsights.getDuration(perforamnceTimingData.responseStart, perforamnceTimingData.responseEnd);
+            const dom = ApplicationInsights.getDuration(perforamnceTimingData.responseEnd, perforamnceTimingData.loadEventEnd);
+            const total = ApplicationInsights.getDuration(perforamnceTimingData.navigationStart, perforamnceTimingData.loadEventEnd);
+            if (total === 0) {
+              // total is 0 ... not valid
+            } else if (total < Math.floor(network) + Math.floor(request) + Math.floor(response) + Math.floor(dom)) {
+                // some browsers may report individual components incorrectly so that the sum of the parts will be bigger than total PLT
+                // in this case, don't report client performance from this page                    
+            } else {
+                
+                // convert to timespans
+                const perfTotal = Tools.msToTimeSpan(total);
+                const networkConnect = Tools.msToTimeSpan(network);
+                const sentRequest = Tools.msToTimeSpan(request);
+                const receivedResponse = Tools.msToTimeSpan(response);
+                const domProcessing = Tools.msToTimeSpan(dom);
+
+                const data = this.generateAppInsightsData(ApplicationInsights.names.pageViewPerformance,
+                    ApplicationInsights.types.pageViewPerformance,
+                    {
+                        ver: 1,
+                        url: Tools.isNullOrUndefined(pageUrl) ? this._location.absUrl() : pageUrl,
+                        name: Tools.isNullOrUndefined(pageName) ? this._location.path() : pageName,
+                        properties: this.validateProperties(properties),
+                        measurements: this.validateMeasurements(measurements),
+                        duration: total,
+                        networkConnect: networkConnect,
+                        sentRequest: sentRequest,
+                        receivedResponse: receivedResponse,
+                        domProcessing: domProcessing,
+                        perfTotal: perfTotal
+                    });
+                this.sendData(data);
+            }
+
+        }
+    }
+
+
 
     trackEvent(eventName, properties, measurements) {
         const data = this.generateAppInsightsData(ApplicationInsights.names.events,
