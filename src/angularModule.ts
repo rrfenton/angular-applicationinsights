@@ -28,16 +28,20 @@ angularAppInsights.run([
             }
         });
 
-      
-        // browser performance data may not be ready, so run the check during an interval callback.
-        var promise = $interval(() => {
+        // Track the performance of the application load.
+        if (applicationInsightsService.options.autoPerformanceTracking) {
+            // browser performance data may not be ready, so run the check during an interval callback.
+            var promise = $interval(() => {
 
-            if (applicationInsightsService.isPerformanceTimingDataReady()) {
-                applicationInsightsService.trackPageViewPerformance(applicationInsightsService.options.applicationName + $location.path());
-                // cancel the interval once the performance telemetry is sent.
-                $interval.cancel(promise);
-            }
-        }, 250);
+                if (applicationInsightsService.isPerformanceTimingDataReady()) {
+                    applicationInsightsService.trackPageViewPerformance(applicationInsightsService.options.applicationName + $location.path());
+                    // cancel the interval once the performance telemetry is sent.
+                    $interval.cancel(promise);
+                }
+            }, 250);
+        }
+
+
     }
 ]);
 
