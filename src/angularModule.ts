@@ -1,8 +1,14 @@
 /// <reference path="./ApplicationInsights.ts" />
 declare var angular: angular.IAngularStatic;
 
+var httpRequestService = angular.module("$$ApplicationInsights-HttpRequestModule", []);
+httpRequestService.factory("$$applicationInsightsHttpRequestService", () => {
+    return ()=> new HttpRequest();
+});
+
+
 // Application Insights Module
-var angularAppInsights = angular.module("ApplicationInsightsModule", []);
+var angularAppInsights = angular.module("ApplicationInsightsModule", ["$$ApplicationInsights-HttpRequestModule"]);
 var logInterceptor: LogInterceptor;
 var exceptionInterceptor: ExceptionInterceptor;
 var tools = new Tools(angular);
@@ -60,8 +66,7 @@ class AppInsightsProvider implements angular.IServiceProvider {
             this._options.instrumentationKey = instrumentationKey;
         }
     } // invoked when the provider is run
-    $get = [
-        "$http", "$locale", "$window", "$location", "$rootScope", "$parse", "$document", ($http, $locale, $window, $location, $rootScope, $parse, $document) => {
+    $get = ["$locale", "$window", "$location", "$rootScope", "$parse", "$document", "$$applicationInsightsHttpRequestService", ($locale, $window, $location, $rootScope, $parse, $document, $$applicationInsightsHttpRequestService) => {
 
             // get a reference of storage
             var storage = new AppInsightsStorage({
@@ -71,7 +76,7 @@ class AppInsightsProvider implements angular.IServiceProvider {
                 parse: $parse
             });
 
-            return new ApplicationInsights(storage, $http, $locale, $window, $location, logInterceptor, exceptionInterceptor, this._options);
+            return new ApplicationInsights(storage, $locale, $window, $location, logInterceptor, exceptionInterceptor, $$applicationInsightsHttpRequestService, this._options);
         }
     ];
 

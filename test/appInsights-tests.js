@@ -5,17 +5,42 @@ describe('Application Insights for Angular JS Provider', function(){
 	var $httpBackend;
 	var $log;
 	var $exceptionHandler;
-	beforeEach( module('ApplicationInsightsModule', function(applicationInsightsServiceProvider){
-    	applicationInsightsServiceProvider.configure('1234567890','angularjs-appinsights-unittests', false);
+    var _http;
 
-    }));
 
-	beforeEach(inject(function(applicationInsightsService, $injector) { 
-		_insights = applicationInsightsService;
-		$httpBackend = $injector.get('$httpBackend');
-		$log = $injector.get('$log');
-		$log.reset();
-		$exceptionHandler = $injector.get('$exceptionHandler');
+    beforeEach(module("$$ApplicationInsights-HttpRequestModule", function ($provide) {
+
+        var mockHttp = function() {};
+        mockHttp.prototype.send = function(options, successCallback, errorCallback) {
+            
+            _http(options)
+                .then(function (response) {
+                        // success
+                        successCallback();
+                    },
+                    function (response) {
+                        //failure
+                        errorCallback(0);
+                    });
+        };
+
+
+	    $provide.factory("$$applicationInsightsHttpRequestService", function() { return function() { return new mockHttp(); } });
+	} ));
+
+
+	beforeEach(module('ApplicationInsightsModule', function (applicationInsightsServiceProvider) {
+	    applicationInsightsServiceProvider.configure('1234567890', 'angularjs-appinsights-unittests', false);
+
+	}));
+
+	beforeEach(inject(function (applicationInsightsService, $injector,$http) {
+	    _insights = applicationInsightsService;
+	    $httpBackend = $injector.get('$httpBackend');
+	    $log = $injector.get('$log');
+	    $log.reset();
+	    $exceptionHandler = $injector.get('$exceptionHandler');
+	    _http = $http;
 	}));
  
  	afterEach(function(){
