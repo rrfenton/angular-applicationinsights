@@ -1,0 +1,46 @@
+{
+  "project": {
+    "version": "1.0.0-beta.19-3",
+    "name": "ng-applicationinsights"
+  },
+  "apps": [
+    {
+      "root": "src",
+      "outDir": "dist",
+      "main": "index.ts",
+      "test": "test.ts",
+      "tsconfig": "tsconfig.json",
+      "prefix": "ng-applicationinsights",
+      "mobile": false,
+      "scripts": [],
+      "environments": {
+        "source": {},
+        "dev": {},
+        "prod": {}
+      }
+    }
+  ],
+  "addons": [],
+  "packages": [],
+  "test": {
+    "karma": {
+      "config": "./karma.conf.js"
+    }
+  },
+  "defaults": {
+    "styleExt": "css",
+    "prefixInterfaces": false,
+    "inline": {
+      "style": false,
+      "template": false
+    },
+    "spec": {
+      "class": false,
+      "component": true,
+      "directive": true,
+      "module": false,
+      "pipe": true,
+      "service": true
+    }
+  }
+}
