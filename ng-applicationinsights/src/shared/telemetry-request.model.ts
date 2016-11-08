@@ -1,6 +1,4 @@
-﻿/// <reference path="typings/angularjs/angular.d.ts" />
-/// <reference path="./Tools.ts" />
-class TelemetryRequest implements angular.IRequestConfig {
+﻿class TelemetryRequest implements angular.IRequestConfig {
     method: string;
     url: string;
     headers: TelemetryRequestHeaders;
