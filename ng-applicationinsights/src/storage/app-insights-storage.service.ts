@@ -9,12 +9,6 @@ import { Injectable } from '@angular/core';
 export class AppInsightsStorage {
 
     private static defaultConfig = {
-        // You should set a prefix to avoid overwriting any local storage variables from the rest of your app
-        // e.g. localStorageServiceProvider.setPrefix('youAppName');
-        // With provider you can use config as this:
-        // myApp.config(function (localStorageServiceProvider) {
-        //    localStorageServiceProvider.prefix = 'yourAppName';
-        // });
         prefix: 'ls',
 
         // You could change web storage type localstorage or sessionStorage

@@ -1,3 +1,4 @@
+import { StackFrame } from './../shared/stack-frame.model';
 import { Injectable } from '@angular/core';
 
 
