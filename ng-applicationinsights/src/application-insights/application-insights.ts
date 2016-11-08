@@ -1,10 +1,10 @@
 ﻿import { ApplicationInsightsTrackService } from './../shared/application-insights-track.service';
 import { StackParser } from './../stack-parser/stack-parser.service';
 import { Tools } from './../tools/tools.service';
-import { Options } from './../shared/options.model';
+import { AppInsightsOptions } from './../shared/options.model';
 import { ExceptionInterceptor } from './../exception-interceptor/exception-interceptor.service';
 import { AppInsightsStorage } from './../storage/app-insights-storage.service';
-import { Injectable } from '@angular/core';
+import { Injectable, ErrorHandler, Inject } from '@angular/core';
 
 @Injectable()
 export class ApplicationInsights {
@@ -27,22 +27,28 @@ export class ApplicationInsights {
     };
 
     private _sessionKey = '$$appInsights__session';
-    options: Options;
+    options: AppInsightsOptions;
 
     private _commonProperties: any;
 
     private _version = 'angular:0.2.8';
 
     constructor(private localStorage: AppInsightsStorage,
-        private exceptionInterceptor: ExceptionInterceptor,
+        @Inject(ErrorHandler) private  exceptionInterceptor: ExceptionInterceptor,
         private appInsightsStorage: AppInsightsStorage,
-        private appInsightsTrackService: ApplicationInsightsTrackService,
-        options: Options) {
+        private appInsightsOptions: AppInsightsOptions,
+        private appInsightsTrackService: ApplicationInsightsTrackService) {
+          this.options = appInsightsOptions;
+          if (this.options.autoExceptionTracking) {
+              this.exceptionInterceptor.setInterceptFunction((exception) => this.trackException(exception));
+          }
+    }
 
-        if (this.options.autoExceptionTracking) {
-            this.exceptionInterceptor.setInterceptFunction((exception, cause) => this.trackException(exception, cause));
-        }
-
+    setOptions(options: AppInsightsOptions){
+      this.options = options;
+      if (this.options.autoExceptionTracking) {
+          this.exceptionInterceptor.setInterceptFunction((exception) => this.trackException(exception));
+      }
     }
 
     trackPageView(pageName?, pageUrl?, properties?, measurements?, duration?: number) {
@@ -101,7 +107,7 @@ export class ApplicationInsights {
         this.sendData(data);
     }
 
-    trackException(exception, cause) {
+    trackException(exception) {
         if (Tools.isNullOrUndefined(exception)) {
             return;
         }
@@ -124,6 +130,8 @@ export class ApplicationInsights {
                 ]
             });
         this.sendData(data);
+
+        return data.operation.id;
     }
 
     setCommonProperties(data) {
@@ -286,6 +294,8 @@ https://github.com/Microsoft/ApplicationInsights-JS/blob/7bbf8b7a3b4e3610cefb31e
             Object.assign(payloadData.properties, this._commonProperties);
         }
 
+        payloadData.name = payloadName;
+
         return {
             name: payloadName,
             time: new Date().toISOString(),
@@ -311,7 +321,7 @@ https://github.com/Microsoft/ApplicationInsights-JS/blob/7bbf8b7a3b4e3610cefb31e
             },
             data: {
                 type: payloadDataType,
-                item: payloadData
+                item: payloadData,
             }
         };
     }

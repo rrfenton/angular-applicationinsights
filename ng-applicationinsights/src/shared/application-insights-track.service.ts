@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
-import { Http, RequestOptions } from '@angular/http';
+import { Http, RequestOptions, Headers } from '@angular/http';
 import 'rxjs/add/operator/catch';
 import 'rxjs/add/operator/map';
 
@@ -14,6 +14,7 @@ export class ApplicationInsightsTrackService {
 
     sendData(data): Observable<string> {
         let options = new RequestOptions();
+        options.headers = new Headers();
         options.headers.append('Accept', this._contentType);
         options.headers.append('Content-Type', this._contentType);
 
@@ -31,6 +32,6 @@ export class ApplicationInsightsTrackService {
         const errMsg = (error.message) ? error.message :
             error.status ? `${error.status} - ${error.statusText}` : 'Server error';
         console.error(errMsg); // log to console instead
-        return Observable.throw(errMsg);
+        return Observable.throw(error);
     }
 }

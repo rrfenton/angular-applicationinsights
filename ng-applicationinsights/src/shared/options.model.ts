@@ -1,9 +1,12 @@
-﻿export class Options {
-        applicationName= '';
-        autoPageViewTracking= true;
-        autoLogTracking= true;
-        autoExceptionTracking= true;
-        sessionInactivityTimeout = 1800000;
-        instrumentationKey = '';
-        developerMode = true;
+﻿export class AppInsightsOptions {
+    constructor(
+      public instrumentationKey: string,
+      public applicationName: string,
+      public autoPageViewTracking = true,
+      public autoExceptionTracking = true,
+      public sessionInactivityTimeout = 1800000,
+      public developerMode = false
+    ) {
+    }
 }
+

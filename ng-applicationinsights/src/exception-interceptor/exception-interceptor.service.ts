@@ -1,6 +1,7 @@
-import { ErrorHandler } from '@angular/core';
+import { ErrorHandler, Injectable } from '@angular/core';
 // Exception interceptor
 // Intercepts exceptions and sends them to Application insights as exception telemetry.
+@Injectable()
 export class ExceptionInterceptor extends ErrorHandler {
     private _interceptFunction;
 

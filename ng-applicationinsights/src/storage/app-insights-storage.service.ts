@@ -36,25 +36,21 @@ export class AppInsightsStorage {
     private _notify;
     private _storageType;
     private _webStorage;
-    private _$rootScope;
     private _$window;
     private _$document;
-    private _$parse;
     private _deriveQualifiedKey;
 
 
-    constructor(tools: Tools, settings: any) {
+    constructor(tools: Tools) {
 
-        this._config = Object.assign(AppInsightsStorage.defaultConfig, settings);
+        this._config = Object.assign(AppInsightsStorage.defaultConfig);
         this._self = this._config;
         this._prefix = this._config.prefix;
         this._cookie = this._config.cookie;
         this._notify = this._config.notify;
         this._storageType = this._config.storageType;
-        this._$rootScope = this._config.rootScope;
-        this._$window = this._config.window;
-        this._$document = this._config.document;
-        this._$parse = this._config.parse;
+        this._$window = window;
+        this._$document = document;
 
         // When Angular's $document is not available
         if (!this._$document) {
@@ -99,7 +95,6 @@ export class AppInsightsStorage {
             return supported;
         } catch (e) {
             this._storageType = 'cookie';
-            this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.error', e.message);
             return false;
         }
     }
@@ -111,7 +106,6 @@ export class AppInsightsStorage {
             ('cookie' in this._$document && (this._$document.cookie.length > 0 ||
             (this._$document.cookie = 'test').indexOf.call(this._$document.cookie, 'test') > -1));
         } catch (e) {
-            this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.error', e.message);
             return false;
         }
     }
@@ -128,7 +122,6 @@ export class AppInsightsStorage {
         }
 
         if (!this.browserSupportsCookies) {
-            this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.error', 'COOKIES_NOT_SUPPORTED');
             return false;
         }
 
@@ -155,7 +148,6 @@ export class AppInsightsStorage {
                   this._deriveQualifiedKey(key) + '=' + encodeURIComponent(value) + expiry + cookiePath + cookieDomain;
             }
         } catch (e) {
-            this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.error', e.message);
             return false;
         }
         return true;
@@ -165,7 +157,6 @@ export class AppInsightsStorage {
     // Example use: localStorageService.cookie.get('library'); // returns 'angular'
     getFromCookies(key) {
         if (!this.browserSupportsCookies) {
-            this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.error', 'COOKIES_NOT_SUPPORTED');
             return false;
         }
 
@@ -203,15 +194,6 @@ export class AppInsightsStorage {
 
         // If this browser does not support local storage use cookies
         if (!this.browserSupportsLocalStorage() || this._self.storageType === 'cookie') {
-
-            if (!this.browserSupportsLocalStorage()) {
-                this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.warning', 'LOCAL_STORAGE_NOT_SUPPORTED');
-            }
-
-            if (this._notify.setItem) {
-                this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.setitem',
-                  { key: key, newvalue: value, storageType: 'cookie' });
-            }
             return this.addToCookies(key, value);
         }
 
@@ -222,13 +204,8 @@ export class AppInsightsStorage {
             if (this._webStorage) {
                 this._webStorage.setItem(this._deriveQualifiedKey(key), value);
             }
-            if (this._notify.setItem) {
-                this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.setitem',
-                  { key: key, newvalue: value, storageType: this._self.storageType });
-            }
         } catch (e) {
 
-            this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.error', e.message);
             return this.addToCookies(key, value);
         }
         return true;
@@ -239,9 +216,6 @@ export class AppInsightsStorage {
     private getFromLocalStorage(key) {
 
         if (!this.browserSupportsLocalStorage() || this._self.storageType === 'cookie') {
-            if (!this.browserSupportsLocalStorage()) {
-                this._$rootScope.$broadcast('AngularAppInsights.Storage.notification.warning', 'LOCAL_STORAGE_NOT_SUPPORTED');
-            }
 
             return this.getFromCookies(key);
         }
