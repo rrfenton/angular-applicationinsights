@@ -17,6 +17,7 @@ export class ApplicationInsights {
         metrics: ApplicationInsights.namespace + 'Metric',
         exception: ApplicationInsights.namespace + 'Exception'
     };
+
     private static types = {
         pageViews: ApplicationInsights.namespace + 'PageViewData',
         traceMessage: ApplicationInsights.namespace + 'MessageData',
@@ -25,13 +26,6 @@ export class ApplicationInsights {
         exception: ApplicationInsights.namespace + 'ExceptionData'
     };
 
-    private _localStorage: AppInsightsStorage;
-    private _window: Window;
-    private _location: Location;
-
-    private _log: any;
-    private _exceptionInterceptor: ExceptionInterceptor;
-
     private _sessionKey = '$$appInsights__session';
     options: Options;
 
@@ -39,20 +33,14 @@ export class ApplicationInsights {
 
     private _version = 'angular:0.2.8';
 
-    constructor(localStorage: AppInsightsStorage,
+    constructor(private localStorage: AppInsightsStorage,
         private exceptionInterceptor: ExceptionInterceptor,
         private appInsightsStorage: AppInsightsStorage,
         private appInsightsTrackService: ApplicationInsightsTrackService,
         options: Options) {
 
-        this._localStorage = localStorage;
-        this._window = window;
-        this._location = window.location;
-        this.options = options;
-        this._exceptionInterceptor = exceptionInterceptor;
-
         if (this.options.autoExceptionTracking) {
-            this._exceptionInterceptor.setInterceptFunction((exception, cause) => this.trackException(exception, cause));
+            this.exceptionInterceptor.setInterceptFunction((exception, cause) => this.trackException(exception, cause));
         }
 
     }
@@ -63,12 +51,13 @@ export class ApplicationInsights {
             ApplicationInsights.types.pageViews,
             {
                 ver: 1,
-                url: Tools.isNullOrUndefined(pageUrl) ? this._location.absUrl() : pageUrl,
-                name: Tools.isNullOrUndefined(pageName) ? this._location.path() : pageName,
+                url: Tools.isNullOrUndefined(pageUrl) ? pageUrl : pageUrl,
+                name: Tools.isNullOrUndefined(pageName) ? pageName : pageName,
                 properties: this.validateProperties(properties),
                 measurements: this.validateMeasurements(measurements),
                 duration: this.validateDuration(duration)
             });
+
         this.sendData(data);
     }
 
@@ -81,6 +70,7 @@ export class ApplicationInsights {
                 properties: this.validateProperties(properties),
                 measurements: this.validateMeasurements(measurements)
             });
+
         this.sendData(data);
     }
 
@@ -96,6 +86,7 @@ export class ApplicationInsights {
                 severityLevel: this.validateSeverityLevel(level),
                 properties: this.validateProperties(properties)
             });
+
         this.sendData(data);
     }
 
@@ -144,10 +135,10 @@ export class ApplicationInsights {
     private getUniqueId() {
         const uuidKey = '$$appInsights__uuid';
         // see if there is already an id stored locally, if not generate a new value
-        let uuid = this._localStorage.get(uuidKey);
+        let uuid = this.localStorage.get(uuidKey);
         if (Tools.isNullOrUndefined(uuid)) {
             uuid = Tools.generateGuid();
-            this._localStorage.set(uuidKey, uuid);
+            this.localStorage.set(uuidKey, uuid);
         }
         return uuid;
     }
@@ -158,14 +149,13 @@ export class ApplicationInsights {
             id: Tools.generateGuid(),
             accessed: new Date().getTime()
         };
-        this._localStorage.set(this._sessionKey, sessionData);
+        this.localStorage.set(this._sessionKey, sessionData);
         return sessionData;
     }
 
-
     private getSessionId() {
 
-        let sessionData = this._localStorage.get(this._sessionKey);
+        let sessionData = this.localStorage.get(this._sessionKey);
 
         if (Tools.isNullOrUndefined(sessionData)) {
 
@@ -184,7 +174,7 @@ export class ApplicationInsights {
 
                 // valid session, update the last access timestamp
                 sessionData.accessed = now;
-                this._localStorage.set(this._sessionKey, sessionData);
+                this.localStorage.set(this._sessionKey, sessionData);
             }
         }
 
@@ -198,7 +188,7 @@ export class ApplicationInsights {
         }
 
         if (!Tools.isObject(measurements)) {
-            this._log.warn('The value of the measurements parameter must be an object consisting of a string/number pairs.');
+            console.warn('The value of the measurements parameter must be an object consisting of a string/number pairs.');
             return null;
         }
 
@@ -207,7 +197,7 @@ export class ApplicationInsights {
             if (Tools.isNumber(measurements[metricName])) {
                 validatedMeasurements[metricName] = measurements[metricName];
             } else {
-                this._log.warn(`The value of measurement ${metricName} is not a number.`);
+                console.warn(`The value of measurement ${metricName} is not a number.`);
             }
         }
 
@@ -222,17 +212,19 @@ export class ApplicationInsights {
         }
 
         if (!Tools.isObject(properties)) {
-            this._log.warn('The value of the properties parameter must be an object consisting of a string/string pairs.');
+            console.warn('The value of the properties parameter must be an object consisting of a string/string pairs.');
             return null;
         }
 
         let validateProperties = {};
+
         for (let propName in properties) {
-            let currentProp = properties[propName];
-            if (!Tools.isNullOrUndefined(currentProp) && !Tools.isObject(currentProp) && !Tools.isArray(currentProp)) {
-                validateProperties[propName] = currentProp;
+            if (!Tools.isNullOrUndefined(properties[propName])
+              && !Tools.isObject(properties[propName])
+              && !Tools.isArray(properties[propName])) {
+                validateProperties[propName] = properties[propName];
             } else {
-                this._log.warn(`The value of property ${propName} could not be determined to be a string or number.`);
+              console.warn(`The value of property ${propName} could not be determined to be a string or number.`);
             }
         }
         return validateProperties;
@@ -245,16 +237,17 @@ export class ApplicationInsights {
         }
 
         if (!Tools.isNumber(duration) || duration < 0) {
-            this._log.warn('The value of the durations parameter must be a positive number');
-            return null;
+          console.warn('The value of the durations parameter must be a positive number');
+          return null;
         }
 
         return duration;
     }
 
     private validateSeverityLevel(level) {
-        // https://github.com/Microsoft/ApplicationInsights-JS/blob/7bbf8b7a3b4e3610cefb31e9d61765a2897dcb3b/JavaScript/JavaScriptSDK/Contracts/Generated/SeverityLevel.ts
         /*
+https://github.com/Microsoft/ApplicationInsights-JS/blob/7bbf8b7a3b4e3610cefb31e9d61765a2897dcb3b/JavaScript/JavaScriptSDK/Contracts/Generated/SeverityLevel.ts
+
          export enum SeverityLevel
          {
             Verbose = 0,
@@ -270,7 +263,7 @@ export class ApplicationInsights {
             'debug', // Verbose
             'info', // Information
             'warn', // Warning
-            'error' //Error
+            'error' // Error
         ];
         let levelEnum = levels.indexOf(level);
         return levelEnum > -1 ? levelEnum : 0;
@@ -278,12 +271,10 @@ export class ApplicationInsights {
 
 
     private sendData(data) {
-
         if (this.options.developerMode) {
             console.log(data);
             return;
         }
-
 
         this.appInsightsTrackService.sendData(data).subscribe();
     }
@@ -292,7 +283,7 @@ export class ApplicationInsights {
 
         if (this._commonProperties) {
             payloadData.properties = payloadData.properties || {};
-            Object.assign(payloadData.properties, this._commonProperties)
+            Object.assign(payloadData.properties, this._commonProperties);
         }
 
         return {
@@ -312,7 +303,7 @@ export class ApplicationInsights {
             },
             device: {
                 id: 'browser',
-                resolution: this._window.screen.availWidth + 'x' + this._window.screen.availHeight,
+                resolution: window.screen.availWidth + 'x' + window.screen.availHeight,
                 type: 'Browser'
             },
             internal: {
